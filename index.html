@@ -1,0 +1,601 @@
+<!DOCTYPE html><html lang="zh-Hant-HK"><head><meta name="x-poe-datastore-behavior" content="local_only"><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>香港住宅按揭計算機</title>
+<style>
+  :root{
+    --bg:#f4f6fa; --card:#fff; --ink:#1d2433; --muted:#6b7385; --line:#e2e6ee;
+    --brand:#0b5ed7; --brand-d:#0846a3; --ok:#12805c; --warn:#b26a00; --bad:#c62828;
+    --warn-bg:#fff6e5; --bad-bg:#fdeaea; --info-bg:#eaf2ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"PingFang HK","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55}
+  header{background:linear-gradient(135deg,#0b3d91,#0b5ed7);color:#fff;padding:22px 16px}
+  header h1{margin:0;font-size:1.6rem}
+  header p{margin:4px 0 0;opacity:.9;font-size:.95rem}
+  .wrap{max-width:1200px;margin:0 auto;padding:16px;display:grid;grid-template-columns:420px 1fr;gap:16px}
+  @media(max-width:900px){.wrap{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  .card h2{margin:0 0 12px;font-size:1.05rem;color:var(--brand-d);border-left:4px solid var(--brand);padding-left:8px}
+  label{display:block;font-size:.88rem;color:var(--muted);margin:10px 0 4px}
+  input,select{width:100%;padding:9px 10px;border:1px solid #c9d0de;border-radius:8px;font-size:1rem;background:#fff;font-family:inherit}
+  input:focus,select:focus{outline:2px solid #9ec0ff;border-color:var(--brand)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .hint{font-size:.78rem;color:var(--muted);margin-top:3px}
+  .btn{background:var(--brand);color:#fff;border:0;border-radius:8px;padding:8px 12px;font-size:.88rem;cursor:pointer;font-family:inherit}
+  .btn:hover{background:var(--brand-d)}
+  .btn.ghost{background:#fff;color:var(--brand);border:1px solid var(--brand)}
+  .hidden{display:none!important}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+  .kpi{background:#f8faff;border:1px solid var(--line);border-radius:10px;padding:12px}
+  .kpi .t{font-size:.82rem;color:var(--muted)}
+  .kpi .v{font-size:1.35rem;font-weight:700;margin-top:2px}
+  .kpi.main{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .kpi.main .t{color:#dce8ff}
+  .kpi .s{font-size:.78rem;color:var(--muted);margin-top:2px}
+  .kpi.main .s{color:#dce8ff}
+  .good{color:var(--ok)} .bad{color:var(--bad)}
+  .alert{border-radius:8px;padding:9px 12px;margin:8px 0;font-size:.9rem}
+  .alert.warn{background:var(--warn-bg);border:1px solid #f1d19a;color:#7a4a00}
+  .alert.bad{background:var(--bad-bg);border:1px solid #f1b0b0;color:#8c1c1c}
+  .alert.info{background:var(--info-bg);border:1px solid #bcd3fb;color:#17407f}
+  table{width:100%;border-collapse:collapse;font-size:.92rem}
+  th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  th{background:#f3f6fc;color:#39435a;font-weight:600;position:sticky;top:0}
+  .scroll{max-height:380px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+  .bar{display:flex;height:22px;border-radius:6px;overflow:hidden;margin:8px 0;border:1px solid var(--line)}
+  .bar div{display:flex;align-items:center;justify-content:center;color:#fff;font-size:.75rem;white-space:nowrap}
+  .legend{font-size:.82rem;color:var(--muted)}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin:0 4px 0 10px;vertical-align:middle}
+  .tot td{font-weight:700;background:#f8faff}
+  footer{max-width:1200px;margin:0 auto;padding:0 16px 32px;font-size:.82rem;color:var(--muted)}
+  footer a{color:var(--brand)}
+  .note{font-size:.82rem;color:var(--muted)}
+  details summary{cursor:pointer;color:var(--brand-d);font-weight:600;margin:6px 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>🏠 香港住宅按揭計算機</h1>
+  <p>私人住宅 ・ 月供、首期、印花稅、供款與入息比率及利率情境估算</p>
+</header>
+
+<div class="wrap">
+  <!-- ============ 輸入區 ============ -->
+  <div>
+    <div class="card">
+      <h2>① 物業資料</h2>
+      <label for="price">成交價(港元)</label>
+      <input id="price" class="money" inputmode="numeric" value="8,000,000">
+      <label for="valuation">銀行估值(港元)</label>
+      <input id="valuation" class="money" inputmode="numeric" value="8,000,000">
+      <div class="hint">銀行以「成交價與估值之較低者」作為借貸基礎。</div>
+      <label for="agreeDate">買賣協議日期</label>
+      <input id="agreeDate" type="date">
+      <div class="hint">用於選取適用的印花稅稅率版本。</div>
+      <div class="row">
+        <div>
+          <label for="use">物業用途</label>
+          <select id="use">
+            <option value="self">自住</option>
+            <option value="rental">收租/投資</option>
+          </select>
+        </div>
+        <div>
+          <label for="ptype">物業類型</label>
+          <select id="ptype">
+            <option value="completed">已落成(現樓)</option>
+            <option value="ucs">樓花/建築中</option>
+          </select>
+        </div>
+      </div>
+      <div class="hint">首版不涵蓋資助房屋、村屋、發展商二按及商業物業。</div>
+    </div>
+
+    <div class="card">
+      <h2>② 貸款安排</h2>
+      <label for="product">按揭類別</label>
+      <select id="product">
+        <option value="ordinary">一般按揭(最高 70% 成數)</option>
+        <option value="mip">按揭保險計劃 MIP(高成數)</option>
+      </select>
+      <label for="loanMode">貸款輸入方式</label>
+      <select id="loanMode">
+        <option value="ltv">按揭成數(%)</option>
+        <option value="amount">貸款金額(港元)</option>
+      </select>
+      <div id="ltvBox">
+        <label for="ltv">按揭成數(%,以借貸基礎計算)</label>
+        <input id="ltv" type="number" step="0.1" min="0" max="100" value="70">
+      </div>
+      <div id="amountBox" class="hidden">
+        <label for="loanAmt">貸款金額(港元)</label>
+        <input id="loanAmt" class="money" inputmode="numeric" value="5,600,000">
+      </div>
+      <div style="margin-top:8px"><button class="btn ghost" id="maxBtn" type="button">套用可借上限</button></div>
+      <label for="years">還款年期(年)</label>
+      <input id="years" type="number" min="1" max="40" step="1" value="30">
+    </div>
+
+    <div class="card">
+      <h2>③ 利率計劃</h2>
+      <label for="plan">計劃類型</label>
+      <select id="plan">
+        <option value="fixed">自訂年利率(固定/手動輸入)</option>
+        <option value="H">H 計劃(HIBOR 掛鈎)</option>
+        <option value="P">P 計劃(最優惠利率 P 掛鈎)</option>
+      </select>
+
+      <div id="planFixed">
+        <label for="rateFixed">年利率(%)</label>
+        <input id="rateFixed" type="number" step="0.01" value="3.50">
+      </div>
+      <div id="planH" class="hidden">
+        <div class="row">
+          <div><label for="hibor">HIBOR(%)</label><input id="hibor" type="number" step="0.01" value="2.50"></div>
+          <div><label for="spread">銀行息差(%)</label><input id="spread" type="number" step="0.01" value="1.30"></div>
+        </div>
+        <div class="row">
+          <div><label for="primeH">銀行 P 利率(%)</label><input id="primeH" type="number" step="0.01" value="5.25"></div>
+          <div><label for="capDisc">封頂 P 減幅(%)</label><input id="capDisc" type="number" step="0.01" value="2.00"></div>
+        </div>
+        <div class="hint">年利率 = min(HIBOR + 息差, P − 封頂減幅)。HIBOR 期限(例如一個月)及觀察日期請自行記錄。</div>
+        <label for="hiborDate">HIBOR 觀察日期(選填)</label>
+        <input id="hiborDate" type="date">
+      </div>
+      <div id="planP" class="hidden">
+        <div class="row">
+          <div><label for="primeP">銀行 P 利率(%)</label><input id="primeP" type="number" step="0.01" value="5.25"></div>
+          <div><label for="pDisc">P 減幅(%)</label><input id="pDisc" type="number" step="0.01" value="2.00"></div>
+        </div>
+        <div class="hint">年利率 = 銀行 P 利率 − 減幅。各銀行 P 利率不同,請輸入貴行報價。</div>
+      </div>
+      <div class="alert info" style="margin-top:12px">預設數字只是示例,並非現時市場利率。請以銀行報價為準;優惠利率不一定適用於每位申請人。</div>
+    </div>
+
+    <div class="card">
+      <h2>④ 按揭保險(高成數適用)</h2>
+      <label for="premium">銀行/保險公司報價的保費(港元)</label>
+      <input id="premium" class="money" inputmode="numeric" value="0">
+      <div class="hint">保費因成數、年期及繳付方式而異,請勿用單一固定百分比。此處請輸入報價作估算。</div>
+      <label for="premiumMode">保費繳付方式</label>
+      <select id="premiumMode">
+        <option value="upfront">一次過現金繳付</option>
+        <option value="financed">撥入貸款(分期償還)</option>
+      </select>
+    </div>
+
+    <div class="card">
+      <h2>⑤ 入息及負債</h2>
+      <label for="income">銀行認可每月入息(港元)</label>
+      <input id="income" class="money" inputmode="numeric" value="">
+      <div class="hint">花紅、佣金、租金及自僱收入,銀行的認可比例可能不同。</div>
+      <label for="debt">現有每月債務供款(港元)</label>
+      <input id="debt" class="money" inputmode="numeric" value="0">
+    </div>
+
+    <div class="card">
+      <h2>⑥ 其他費用</h2>
+      <div class="row">
+        <div><label for="legal">律師費(港元)</label><input id="legal" class="money" inputmode="numeric" value="10,000"></div>
+        <div><label for="agentPct">地產代理佣金(%成交價)</label><input id="agentPct" type="number" step="0.05" value="1"></div>
+      </div>
+      <div class="row">
+        <div><label for="other">其他費用(港元)</label><input id="other" class="money" inputmode="numeric" value="0"></div>
+        <div><label for="cashback">銀行現金回贈(港元)</label><input id="cashback" class="money" inputmode="numeric" value="0"></div>
+      </div>
+      <div class="hint">以上預設值僅供參考,佣金可議價。現金回贈或在完成交易後才發放,因此另行顯示,不會從所需現金中扣減。</div>
+    </div>
+  </div>
+
+  <!-- ============ 結果區 ============ -->
+  <div>
+    <div class="card">
+      <h2>估算結果</h2>
+      <div id="warnings"></div>
+      <div class="kpis" id="kpis"></div>
+      <div class="bar" id="bar"></div>
+      <div class="legend" id="legend"></div>
+    </div>
+
+    <div class="card">
+      <h2>貸款及首期明細</h2>
+      <table id="detail"></table>
+    </div>
+
+    <div class="card">
+      <h2>供款與入息比率(DSR)</h2>
+      <table id="dsrTable"></table>
+      <p class="note">DSR =(每月供款 + 現有每月債務供款)÷ 銀行認可每月入息。監管上限參考為 50%,實際批核以銀行評估為準。</p>
+    </div>
+
+    <div class="card">
+      <h2>印花稅(從價印花稅 AVD)</h2>
+      <table id="stampTable"></table>
+      <details>
+        <summary>查看稅率表</summary>
+        <div class="scroll"><table id="stampRules"></table></div>
+      </details>
+    </div>
+
+    <div class="card">
+      <h2>加息情境</h2>
+      <table id="scenario"></table>
+      <p class="note">以下為供款能力測試情境,並非監管規定的壓力測試。假設利率於整個年期維持不變。</p>
+    </div>
+
+    <div class="card">
+      <h2>還款時間表</h2>
+      <div class="scroll"><table id="yearly"></table></div>
+      <details id="monthlyDetails">
+        <summary>展開每月還款明細</summary>
+        <div class="scroll"><table id="monthly"></table></div>
+      </details>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="card">
+    <h2>規則版本及資料來源</h2>
+    <div id="ruleVersions"></div>
+    <p>
+      來源:
+      <a href="https://www.hkma.gov.hk/media/eng/doc/other-information/FAQ_table_(e).pdf" target="_blank" rel="noopener">HKMA 按揭成數及 DSR 上限</a> ・
+      <a href="https://www.ird.gov.hk/eng/faq/avd.htm" target="_blank" rel="noopener">稅務局從價印花稅</a> ・
+      <a href="https://www.hkmc.com.hk/eng/" target="_blank" rel="noopener">香港按揭證券公司</a> ・
+      <a href="https://dahsing.com/html/en/mortgage/mortgage_plan.html" target="_blank" rel="noopener">大新銀行按揭保險資料</a>
+    </p>
+    <p><strong>免責聲明:</strong>本計算機僅供參考,結果屬估算,並非銀行報價、按揭批核或專業意見。實際成數、利率、保費、稅款及費用以銀行、按揭保險公司及稅務局最新公布為準。本版本只計算從價印花稅,未涵蓋其他稅項。</p>
+  </div>
+</footer>
+
+<script>
+/* ================================================================
+   規則設定(依生效日期分版本,日後更新規則時只需新增版本)
+   ================================================================ */
+const RULES = {
+  hkma: [
+    { effective: '2024-10-16', maxLTV: 0.70, maxDSR: 0.50,
+      source: 'HKMA 按揭成數及 DSR 上限表' }
+  ],
+  // 按揭保險計劃(以物業估值/成交價較低者分級)— 潛在上限,並非自動合資格
+  mipBands: [
+    { test: v => v <= 10_000_000,  ltv: 0.90, cap: null,       label: '物業價值 ≤ HK$1,000 萬:最高 90%' },
+    { test: v => v <  11_250_000,  ltv: 0.90, cap: 9_000_000,  label: 'HK$1,000 萬以上至 HK$1,125 萬以下:最高 90%,貸款上限 HK$900 萬' },
+    { test: v => v <= 15_000_000,  ltv: 0.80, cap: null,       label: 'HK$1,125 萬至 HK$1,500 萬:最高 80%' },
+    { test: v => v <= 17_150_000,  ltv: 0.80, cap: 12_000_000, label: 'HK$1,500 萬以上至 HK$1,715 萬:最高 80%,貸款上限 HK$1,200 萬' }
+  ],
+  avd: [
+    { effective: '2026-02-26', source: '稅務局 從價印花稅 常見問題',
+      rows: [
+        { max: 4_000_000,   fixed: 100 },
+        { max: 4_323_780,   base: 100,       rate: 0.20, over: 4_000_000 },
+        { max: 4_500_000,   pct: 0.015 },
+        { max: 4_935_480,   base: 67_500,    rate: 0.10, over: 4_500_000 },
+        { max: 6_000_000,   pct: 0.0225 },
+        { max: 6_720_000,   base: 135_000,   rate: 0.10, over: 6_000_000 },
+        { max: 9_000_000,   pct: 0.03 },
+        { max: 10_080_000,  base: 270_000,   rate: 0.10, over: 9_000_000 },
+        { max: 20_000_000,  pct: 0.0375 },
+        { max: 21_739_120,  base: 750_000,   rate: 0.10, over: 20_000_000 },
+        { max: 100_000_000, pct: 0.0425 },
+        { max: 109_574_470, base: 4_250_000, rate: 0.30, over: 100_000_000 },
+        { max: Infinity,    pct: 0.065 }
+      ] }
+  ]
+};
+
+/* ================================================================
+   工具函數
+   ================================================================ */
+const $ = id => document.getElementById(id);
+const num = id => { const v = parseFloat(String($(id).value).replace(/,/g, '')); return isFinite(v) ? v : 0; };
+const hk = n => 'HK$' + Math.round(n).toLocaleString('en-HK');
+const pct = (n, d = 2) => (n * 100).toFixed(d) + '%';
+
+function pickRule(list, dateStr) {
+  const sorted = [...list].sort((a, b) => a.effective.localeCompare(b.effective));
+  let chosen = null;
+  for (const r of sorted) if (r.effective <= dateStr) chosen = r;
+  return { rule: chosen || sorted[0], before: !chosen };
+}
+
+function mipBand(v) { return RULES.mipBands.find(b => b.test(v)) || null; }
+
+function pmt(L, annualRate, years) {
+  const n = Math.round(years * 12), r = annualRate / 12;
+  if (L <= 0 || n <= 0) return 0;
+  if (r === 0) return L / n;
+  const f = Math.pow(1 + r, n);
+  return L * r * f / (f - 1);
+}
+
+function buildSchedule(L, annualRate, years) {
+  const n = Math.round(years * 12), r = annualRate / 12, M = pmt(L, annualRate, years);
+  let bal = L; const rows = [];
+  for (let i = 1; i <= n; i++) {
+    const interest = bal * r;
+    let principal = M - interest;
+    if (i === n) principal = bal;
+    bal = Math.max(bal - principal, 0);
+    rows.push({ i, interest, principal, payment: principal + interest, bal });
+  }
+  return rows;
+}
+
+// 印花稅:零碎港元以進位計算(實際以稅務局評稅及進位規定為準)
+function stampDuty(amount, rule) {
+  let prev = 0;
+  for (const row of rule.rows) {
+    if (amount <= row.max) {
+      let d;
+      if (row.fixed !== undefined) d = row.fixed;
+      else if (row.pct !== undefined) d = amount * row.pct;
+      else d = row.base + (amount - row.over) * row.rate;
+      return { duty: Math.ceil(d - 1e-6), row, prevMax: prev };
+    }
+    prev = row.max;
+  }
+}
+
+function describeRow(row, prevMax) {
+  const lo = prevMax === 0 ? '0' : (prevMax + 1).toLocaleString('en-HK');
+  const hi = row.max === Infinity ? '以上' : '–' + row.max.toLocaleString('en-HK');
+  const range = row.max === Infinity ? lo + ' 以上' : (prevMax === 0 ? '最高 ' + row.max.toLocaleString('en-HK') : lo + hi);
+  let rule;
+  if (row.fixed !== undefined) rule = 'HK$' + row.fixed;
+  else if (row.pct !== undefined) rule = '成交額的 ' + (row.pct * 100).toFixed(row.pct * 1000 % 1 ? 2 : 1).replace(/\.0$/, '') + '%';
+  else rule = 'HK$' + row.base.toLocaleString('en-HK') + ' + 超出 HK$' + row.over.toLocaleString('en-HK') + ' 部分的 ' + (row.rate * 100) + '%';
+  return [range, rule];
+}
+
+/* ================================================================
+   主計算
+   ================================================================ */
+let last = null;
+
+function calc() {
+  const W = []; // 警告 [{t:'warn'|'bad'|'info', m:''}]
+  const price = num('price');
+  let val = num('valuation'); if (val <= 0) val = price;
+  const V = Math.min(price, val);                          // 借貸基礎
+  const agreeDate = $('agreeDate').value || new Date().toISOString().slice(0, 10);
+  const hkma = pickRule(RULES.hkma, agreeDate).rule;
+  const years = Math.max(1, Math.min(40, num('years') || 30));
+  const product = $('product').value;
+
+  // 1. 可借上限
+  const ordCeil = hkma.maxLTV * V;
+  let maxLoan = ordCeil, bandLabel = '一般按揭上限 ' + pct(hkma.maxLTV, 0);
+  if (product === 'mip') {
+    const b = mipBand(V);
+    if (b) {
+      maxLoan = Math.min(b.ltv * V, b.cap ?? Infinity);
+      bandLabel = b.label;
+    } else {
+      W.push({ t: 'bad', m: `物業價值(借貸基礎 ${hk(V)})高於本計算機所載的按揭保險最高分級(HK$1,715 萬),已改用一般按揭 70% 上限。` });
+    }
+  }
+
+  // 2. 申請貸款
+  const requested = $('loanMode').value === 'ltv' ? num('ltv') / 100 * V : num('loanAmt');
+  let loan = Math.min(requested, maxLoan);
+  if (requested > maxLoan + 0.5) {
+    W.push({ t: 'warn', m: `申請貸款 ${hk(requested)} 超出此類別的可借上限 ${hk(maxLoan)},計算已調整至上限。` });
+  }
+  loan = Math.max(loan, 0);
+  const effLTV = V > 0 ? loan / V : 0;
+  const isHigh = loan > ordCeil + 0.5;
+
+  // 3. 保費
+  let premium = 0, financedPremium = 0, upfrontPremium = 0;
+  if (isHigh) {
+    premium = num('premium');
+    if ($('premiumMode').value === 'financed') financedPremium = premium; else upfrontPremium = premium;
+    if (premium === 0) W.push({ t: 'info', m: '貸款成數超過一般上限,須使用按揭保險。請向銀行查詢保費報價並輸入「④ 按揭保險」,現時保費以 HK$0 計算。' });
+    if ($('use').value === 'rental') W.push({ t: 'warn', m: '高成數按揭保險設有自住、物業擁有權、入息及物業類型等額外要求。收租/投資物業未必符合資格,請向銀行及按揭保險公司確認。' });
+    if ($('ptype').value === 'ucs') W.push({ t: 'info', m: '樓花/建築中物業的高成數條件可能與現樓不同,請向銀行查詢。' });
+    W.push({ t: 'info', m: '按揭保險的上限只是「潛在上限」,並非自動合資格。' });
+  } else if (product === 'mip') {
+    W.push({ t: 'info', m: '現時貸款成數未超過 70%,不一定需要按揭保險,保費按 HK$0 計算。' });
+  }
+  const principal = loan + financedPremium;
+
+  // 4. 估值提示
+  if (val < price) {
+    const extra = hkma.maxLTV * (price - val);
+    W.push({ t: 'warn', m: `銀行估值(${hk(val)})低於成交價(${hk(price)}):以 70% 成數計,貸款上限減少約 ${hk(extra)},首期須相應增加。` });
+  }
+
+  // 5. 利率
+  let rate = 0, rateNote = '';
+  const plan = $('plan').value;
+  if (plan === 'fixed') { rate = num('rateFixed') / 100; rateNote = '自訂年利率'; }
+  else if (plan === 'H') {
+    const a = (num('hibor') + num('spread')) / 100, b = (num('primeH') - num('capDisc')) / 100;
+    rate = Math.min(a, b);
+    rateNote = `H 計劃:min(HIBOR+息差 ${pct(a)}, P−封頂 ${pct(b)}) → 採用${a <= b ? 'HIBOR 路徑' : '封頂 P 路徑'}`;
+  } else { rate = (num('primeP') - num('pDisc')) / 100; rateNote = 'P 計劃:P 利率 − 減幅'; }
+  if (rate < 0) { rate = 0; W.push({ t: 'warn', m: '計算所得利率低於 0,已以 0% 處理。' }); }
+
+  // 6. 月供及利息
+  const n = Math.round(years * 12);
+  const M = pmt(principal, rate, years);
+  const totalPay = M * n, totalInt = Math.max(totalPay - principal, 0);
+
+  // 7. DSR
+  const income = num('income'), debt = num('debt');
+  const dsr = income > 0 ? (M + debt) / income : null;
+  const minIncome = (M + debt) / hkma.maxDSR;
+  if (dsr !== null && dsr > hkma.maxDSR) W.push({ t: 'bad', m: `DSR 為 ${pct(dsr, 1)},超過參考上限 ${pct(hkma.maxDSR, 0)},銀行可能不批核或減少貸款額。` });
+  if (dsr === null) W.push({ t: 'info', m: '輸入「銀行認可每月入息」即可計算 DSR;下表仍會顯示估算所需最低月入息。' });
+
+  // 8. 印花稅
+  const taxBasis = Math.max(price, val);
+  const avdPick = pickRule(RULES.avd, agreeDate);
+  const sd = stampDuty(taxBasis, avdPick.rule);
+  if (avdPick.before) W.push({ t: 'warn', m: `買賣協議日期早於本計算機所載最早稅率版本(${avdPick.rule.effective}),印花稅以該版本估算,可能與當時實際稅率不同。` });
+  if (agreeDate > new Date().toISOString().slice(0, 10)) W.push({ t: 'info', m: '協議日期為未來日期,印花稅以現有最新版本稅率估算。' });
+
+  // 9. 所需現金
+  const down = price - loan;
+  const legal = num('legal'), agent = price * num('agentPct') / 100, other = num('other'), cashback = num('cashback');
+  const cash = down + sd.duty + legal + agent + upfrontPremium + other;
+
+  last = { price, val, V, maxLoan, loan, principal, rate, years, M, ordCeil, effLTV, hkma, income, debt };
+
+  render({ W, price, val, V, ordCeil, maxLoan, bandLabel, requested, loan, effLTV, premium, financedPremium, upfrontPremium,
+    principal, rate, rateNote, years, n, M, totalPay, totalInt, income, debt, dsr, minIncome, taxBasis, sd, avdPick, hkma,
+    down, legal, agent, other, cashback, cash });
+}
+
+/* ================================================================
+   顯示
+   ================================================================ */
+function render(c) {
+  // 警告
+  $('warnings').innerHTML = c.W.map(w => `<div class="alert ${w.t}">${w.t === 'bad' ? '⛔ ' : w.t === 'warn' ? '⚠️ ' : 'ℹ️ '}${w.m}</div>`).join('');
+
+  // 重點
+  const dsrCls = c.dsr === null ? '' : (c.dsr > c.hkma.maxDSR ? 'bad' : 'good');
+  $('kpis').innerHTML = `
+    <div class="kpi main"><div class="t">每月供款</div><div class="v">${hk(c.M)}</div><div class="s">年利率 ${pct(c.rate)} ・ ${c.years} 年(${c.n} 期)</div></div>
+    <div class="kpi"><div class="t">所需現金總額(約)</div><div class="v">${hk(c.cash)}</div><div class="s">首期 + 印花稅 + 各項費用</div></div>
+    <div class="kpi"><div class="t">首期</div><div class="v">${hk(c.down)}</div><div class="s">成交價 − 購買貸款</div></div>
+    <div class="kpi"><div class="t">供款與入息比率(DSR)</div><div class="v ${dsrCls}">${c.dsr === null ? '—' : pct(c.dsr, 1)}</div><div class="s">最低月入息約 ${hk(c.minIncome)}</div></div>
+    <div class="kpi"><div class="t">總利息(利率不變假設)</div><div class="v">${hk(c.totalInt)}</div><div class="s">總還款 ${hk(c.totalPay)}</div></div>`;
+
+  // 本息比例
+  const pP = c.totalPay > 0 ? c.principal / c.totalPay * 100 : 100, iP = 100 - pP;
+  $('bar').innerHTML = `<div style="width:${pP}%;background:#0b5ed7">${pP > 12 ? '本金 ' + pP.toFixed(0) + '%' : ''}</div><div style="width:${iP}%;background:#f29900">${iP > 12 ? '利息 ' + iP.toFixed(0) + '%' : ''}</div>`;
+  $('legend').innerHTML = `<i style="background:#0b5ed7"></i>本金 ${hk(c.principal)}<i style="background:#f29900"></i>利息 ${hk(c.totalInt)}`;
+
+  // 明細
+  const r = (a, b, cls = '') => `<tr class="${cls}"><td>${a}</td><td>${b}</td></tr>`;
+  $('detail').innerHTML =
+    r('成交價', hk(c.price)) +
+    r('銀行估值', hk(c.val)) +
+    r('借貸基礎(成交價與估值較低者)', hk(c.V)) +
+    r('此類別可借上限', `${hk(c.maxLoan)}(${pct(c.V > 0 ? c.maxLoan / c.V : 0, 1)})`) +
+    r('購買貸款', `${hk(c.loan)}(${pct(c.effLTV, 1)})`, 'tot') +
+    r('已撥入貸款的保費', hk(c.financedPremium)) +
+    r('還款本金(貸款 + 已撥入保費)', hk(c.principal), 'tot') +
+    r('首期(成交價 − 購買貸款)', hk(c.down)) +
+    r('印花稅', hk(c.sd.duty)) +
+    r('律師費', hk(c.legal)) +
+    r('地產代理佣金', hk(c.agent)) +
+    r('一次過繳付的保費', hk(c.upfrontPremium)) +
+    r('其他費用', hk(c.other)) +
+    r('所需現金總額(約)', hk(c.cash), 'tot') +
+    r('銀行現金回贈(另計,可能於完成交易後發放)', hk(c.cashback)) +
+    r('利率來源', c.rateNote);
+
+  // DSR
+  $('dsrTable').innerHTML =
+    r('每月供款', hk(c.M)) +
+    r('現有每月債務供款', hk(c.debt)) +
+    r('每月總債務供款', hk(c.M + c.debt)) +
+    r('DSR 參考上限', pct(c.hkma.maxDSR, 0)) +
+    r('銀行認可每月入息', c.income > 0 ? hk(c.income) : '未輸入') +
+    r('你的 DSR', c.dsr === null ? '—' : `<span class="${c.dsr > c.hkma.maxDSR ? 'bad' : 'good'}">${pct(c.dsr, 1)}</span>`, 'tot') +
+    r('估算所需最低每月入息', hk(c.minIncome), 'tot');
+
+  // 印花稅
+  const [rg, rl] = describeRow(c.sd.row, c.sd.prevMax);
+  $('stampTable').innerHTML =
+    r('課稅基礎(成交價與估值較高者)', hk(c.taxBasis)) +
+    r('適用稅率版本', `生效日期 ${c.avdPick.rule.effective}`) +
+    r('適用級別', `${rg}:${rl}`) +
+    r('應繳印花稅(估算)', hk(c.sd.duty), 'tot') +
+    r('佔成交價比率', pct(c.price > 0 ? c.sd.duty / c.price : 0));
+  $('stampRules').innerHTML = '<tr><th>應課稅金額(港元)</th><th>印花稅</th></tr>' +
+    c.avdPick.rule.rows.map((row, i, a) => {
+      const [x, y] = describeRow(row, i ? a[i - 1].max : 0);
+      const hit = row === c.sd.row ? ' style="background:#eaf2ff;font-weight:600"' : '';
+      return `<tr${hit}><td>${x}</td><td>${y}</td></tr>`;
+    }).join('');
+
+  // 加息情境
+  const steps = [0, 1, 2, 3];
+  $('scenario').innerHTML = '<tr><th>情境</th><th>年利率</th><th>每月供款</th><th>較現時增加</th><th>DSR</th><th>最低月入息</th></tr>' +
+    steps.map(s => {
+      const rr = c.rate + s / 100, m = pmt(c.principal, rr, c.years), d = (c.income > 0) ? (m + c.debt) / c.income : null;
+      return `<tr><td>${s === 0 ? '現時利率' : '加 ' + s + ' 個百分點'}</td><td>${pct(rr)}</td><td>${hk(m)}</td><td>${s === 0 ? '—' : '+' + hk(m - c.M)}</td>
+        <td class="${d !== null && d > c.hkma.maxDSR ? 'bad' : ''}">${d === null ? '—' : pct(d, 1)}</td><td>${hk((m + c.debt) / c.hkma.maxDSR)}</td></tr>`;
+    }).join('');
+
+  // 還款時間表(按年)
+  const sch = buildSchedule(c.principal, c.rate, c.years);
+  const yrs = {};
+  sch.forEach(x => {
+    const y = Math.ceil(x.i / 12);
+    (yrs[y] ||= { open: x.bal + x.principal, int: 0, pr: 0, close: 0 });
+    yrs[y].int += x.interest; yrs[y].pr += x.principal; yrs[y].close = x.bal;
+  });
+  $('yearly').innerHTML = '<tr><th>年份</th><th>年初結欠</th><th>已還本金</th><th>已付利息</th><th>年末結欠</th></tr>' +
+    Object.entries(yrs).map(([y, v]) => `<tr><td>第 ${y} 年</td><td>${hk(v.open)}</td><td>${hk(v.pr)}</td><td>${hk(v.int)}</td><td>${hk(v.close)}</td></tr>`).join('') +
+    `<tr class="tot"><td>合計</td><td></td><td>${hk(c.principal)}</td><td>${hk(c.totalInt)}</td><td></td></tr>`;
+
+  // 每月明細(展開時才產生)
+  window._sch = sch;
+  if ($('monthlyDetails').open) renderMonthly();
+}
+
+function renderMonthly() {
+  const sch = window._sch || [];
+  $('monthly').innerHTML = '<tr><th>期數</th><th>供款</th><th>本金</th><th>利息</th><th>結欠</th></tr>' +
+    sch.map(x => `<tr><td>${x.i}</td><td>${hk(x.payment)}</td><td>${hk(x.principal)}</td><td>${hk(x.interest)}</td><td>${hk(x.bal)}</td></tr>`).join('');
+}
+
+function renderRuleVersions() {
+  const h = RULES.hkma[RULES.hkma.length - 1], a = RULES.avd[RULES.avd.length - 1];
+  $('ruleVersions').innerHTML = `<table>
+    <tr><th>規則</th><th>內容</th><th>生效日期</th></tr>
+    <tr><td>HKMA 一般按揭上限</td><td>最高成數 ${pct(h.maxLTV, 0)};DSR 上限 ${pct(h.maxDSR, 0)}</td><td>${h.effective}</td></tr>
+    <tr><td>按揭保險計劃(潛在上限)</td><td>≤1,000 萬:90%;1,000–1,125 萬:90% 但貸款上限 900 萬;1,125–1,500 萬:80%;1,500–1,715 萬:80% 但貸款上限 1,200 萬</td><td>請向 HKMCI 核實最新資料</td></tr>
+    <tr><td>住宅從價印花稅</td><td>13 級稅率表(見上方)</td><td>${a.effective}</td></tr>
+  </table>
+  <p class="note">推出前請核對最新 HKMA 規定、HKMCI 官方資格及保費表,以及稅務局的進位及評稅規則。</p>`;
+}
+
+/* ================================================================
+   事件
+   ================================================================ */
+function toggles() {
+  $('ltvBox').classList.toggle('hidden', $('loanMode').value !== 'ltv');
+  $('amountBox').classList.toggle('hidden', $('loanMode').value !== 'amount');
+  $('planFixed').classList.toggle('hidden', $('plan').value !== 'fixed');
+  $('planH').classList.toggle('hidden', $('plan').value !== 'H');
+  $('planP').classList.toggle('hidden', $('plan').value !== 'P');
+}
+
+document.querySelectorAll('input,select').forEach(el => {
+  el.addEventListener('input', () => { toggles(); calc(); });
+  el.addEventListener('change', () => { toggles(); calc(); });
+});
+document.querySelectorAll('.money').forEach(el => {
+  el.addEventListener('blur', () => {
+    const v = parseFloat(el.value.replace(/,/g, ''));
+    el.value = isFinite(v) ? Math.round(v).toLocaleString('en-HK') : '';
+    calc();
+  });
+});
+$('monthlyDetails').addEventListener('toggle', () => { if ($('monthlyDetails').open) renderMonthly(); });
+$('maxBtn').addEventListener('click', () => {
+  if (!last) return;
+  if ($('loanMode').value === 'ltv') $('ltv').value = (Math.floor(last.maxLoan / last.V * 10000) / 100).toString();
+  else $('loanAmt').value = Math.floor(last.maxLoan).toLocaleString('en-HK');
+  calc();
+});
+
+// 初始化
+$('agreeDate').value = new Date().toISOString().slice(0, 10);
+renderRuleVersions();
+toggles();
+calc();
+</script>
+
+
+</body></html>
